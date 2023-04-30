@@ -1,0 +1,249 @@
+import os
+import sys
+import pymysql                  # MySQL데이터베이스를 사용하기 위한 라이브러리 / 2023-02-07
+from Filter import UserInput, FindSql, SelOpt, ShowTables, TableCreate, Read, sqlAction
+
+# 데이터베이스 환경변수
+config = {                  
+    'host' : '127.0.0.1',   # ipv4주소
+    'user' : 'root',        # MySQL 계정
+    'passwd' : 'root1234',  # MySQL 비밀번호
+    'database' : 'test_db', # MySQL 데이터베이스명
+    'port' : 3306,          # MySQL 통신코드 리터럴 / 정수값 사용
+    'charset' : 'utf8',     # MySQL에서 한글 사용 설정
+    'use_unicode' : True    # MySQL에서 한글 사용 설정
+    }
+
+
+# 판매 관리 클래스 / 2023-02-17 
+class SaleFunc(UserInput) :
+    def __init__(self):
+        super().__init__()
+# (1) 판매기록 등록 매서드      
+    def saleCreate(self) :
+        try :
+            while True:
+                conn = pymysql.connect(**config)    
+                cursor = conn.cursor()        
+                print("<<<판매기록 등록입니다>>>\n등록할 데이터의 ",end='')
+                in_code = super().codeInput() 
+                rows_c1 = FindSql('p', 3, in_code).sqlFind()
+                # 코드 입력값이 공백이 아닌 경우 
+                if in_code != '' :         
+                    # 1) product 테이블에 해당 제품코드의 상품이 존재하지 않는 경우            
+                    if len(rows_c1) == 0:
+                        iValue = super().userInput() # 사용자 입력 값 호출
+                        sql = f"INSERT INTO product(pCode, pName, UnitPrice, discountRate) VALUES('{in_code}','{iValue[0]}', '{iValue[1]}', '{iValue[2]}')" 
+                        sqlAction(sql, True)
+                        print("제품등록을 성공했습니다.")
+                        break
+
+                    # 2) product 테이블에 해당 제품코드의 상품이 존재하는 경우
+                    else :
+                        qty = super().qtyInput() # 제품 가격 출력 / 2023-02-08 / ### <요구사항-1> 반영 ###
+                        sql = f"INSERT INTO sales(sCode, Qty, Amt) VALUES('{in_code}','{qty}', '{getPrice(in_code, qty)}')" 
+                        sqlAction(sql, True) # 2023-03-02 접속함수 실행
+                        print("판매기록 등록을 성공했습니다.")
+                        break
+
+                # SQL조회 결과가 없는 경우
+                else :
+                    print("판매기록이 없습니다.")
+                    continue
+                
+        except Exception as e :
+            print('오류 : ', e)
+            conn.rollback()
+
+        finally:
+            cursor.close()
+            conn.close()
+
+
+    #--------------------------
+    # (2) 판매기록 삭제 매서드
+    def saleDelete(self) : 
+        try :
+            while True:
+                conn = pymysql.connect(**config)    
+                cursor = conn.cursor()  
+                print("<<<판매기록 삭제합니다>>>")
+                Read('s').ReadAll() 
+                print('삭제할 데이터의 ',end='') 
+                in_code = super().codeInput() 
+                rows = FindSql('s', 3, in_code).sqlFind()
+                # 1) 제품코드가 존재하는 경우
+                if rows : 
+                    print("<<<선택한 제품코드의 판매기록 목록 조회입니다>>>")
+                    ShowTables().showSale(rows)
+                    print('삭제할 데이터의 ',end='')
+                    in_no = super().noInput()
+                    rows1 = FindSql('s', 2, in_no).sqlFind()
+                    # 1-1) 제품코드가 존재하면서 No가 존재하는 경우
+                    if rows1:
+                        # 판매 삭제 확인문
+                        yesNo = input('삭제하시겠습니까>(y/n) : ')
+                        if (SelOpt(yesNo).startOpt() == "Y") and len(rows1) != 0: 
+                            sql = f"DELETE FROM sales WHERE seqNo = '{in_no}'"
+                            sqlAction(sql, True) # 2023-03-02 접속함수 실행         
+                            print('삭제 성공했습니다.')
+                            Read('s').ReadAll()
+                            break
+                        # 판매 확인문 취소 입력
+                        elif (SelOpt(yesNo).startOpt() == "Y") and len(rows1) == 0:
+                            print("<<<조회한 목록에 입력한 No가 존재하지 않습니다.>>>")
+                            os.system("pause")
+                            continue
+                        elif SelOpt(yesNo).startOpt() == "N":
+                            print("<<<삭제를 취소했습니다.>>>")
+                            break
+                        else:
+                            print('잘못 입력했습니다. 다시 입력해주세요.')
+                            continue
+                    # 1-2) 제품코드가 존재하지만 No가 하지 않는 경우
+                    else :
+                        print('삭제 실패했습니다.\n입력한 값에 해당하는 데이터가 존재하지 않습니다.')
+                        break
+                # 2) 제품코드가 존재하지 않는 경우
+                else:
+                    print('입력한 값에 해당하는 데이터가 존재하지 않습니다.')
+                    continue
+                
+        except Exception as e :
+            print('db 연동 실패 : ', e)
+            conn.rollback() 
+
+        finally:
+            cursor.close()
+            conn.close()
+
+    #--------------------------   
+    # (3) 판매기록 수정 매서드
+    def saleUpdate(self) : 
+        try :
+            while True:
+                conn = pymysql.connect(**config)    
+                cursor = conn.cursor()
+                Read('s').ReadAll() # 전체 데이터 출력
+                print('<<<판매기록을 수정합니다>>>\n수정할 데이터의 ',end='')
+                in_code = super().codeInput() # 제품코드 입력 매서드 호출
+                rows = FindSql('s', 3, in_code).sqlFind()
+
+                # SELECT 쿼리 실행결과가 있는 경우               
+                if rows : 
+                    print("<<<입력한 제품코드의 판매기록 목록 조회입니다>>>")
+                    ShowTables().showSale(rows)
+                    print('수정할 데이터의 ',end='')
+                    in_no = super().noInput()
+                    rows1 = FindSql('s', 2, in_no).sqlFind() # 수정할 데이터의 No선택
+                    # 판매 수정 확인문
+                    yesNo = input('수정하시겠습니까>(y/n) : ')
+                    if (SelOpt(yesNo).startOpt() == "Y") and len(rows1) != 0: 
+                        print("<<<수정할 데이터를 입력하세요.>>>")
+                        in_qty = super().qtyInput()                   
+                        # 판매 기록을 수정하는 SQL / 2023-02-09 / ### <요구사항-1> 반영 ###
+                        sql = f"UPDATE sales SET Qty = '{in_qty}', Amt = '{getPrice(in_code ,in_qty)}' WHERE seqNo = '{in_no}'"
+                        sqlAction(sql, True) # 2023-03-02 /접속함수 실행       
+                        print("<<<수정을 완료했습니다>>>\n<<<수정 결과입니다>>>")
+                        Read('s').ReadAll()
+                        break
+                    elif (SelOpt(yesNo).startOpt() == "Y") and len(rows1) == 0:
+                        print("<<<조회한 목록에 입력한 No가 존재하지 않습니다.>>>")
+                        os.system("pause")
+                        continue
+                    elif SelOpt(yesNo).startOpt() == "N":
+                        print("<<<수정을 취소했습니다.>>>")
+                        break
+                    else:
+                        print('잘못 입력했습니다. 다시 입력해주세요.')
+                        os.system("pause")
+                        continue
+                # SELECT 쿼리 실행결과가 없는 경우        
+                else : 
+                    print('수정할 제품코드가 없습니다.')
+                    os.system("pause")
+                    continue
+                
+        except Exception as e :
+            print('db 연동 실패 : ', e)
+            conn.rollback() 
+            
+        finally:
+            cursor.close()
+            conn.close()
+            
+
+#--------------------------
+# 계산함수 
+# <변경사항> 2023-03-02
+# 매서드마다 사용하던 계산을 함수로 설계             
+def getPrice(in_Code, qty):
+    while True:
+        sql = f"SELECT unitPrice, discountRate FROM product WHERE pCode = '{in_Code}'" # product 테이블에서 row_data에 맞는 제품가격을 불러온다.
+        pamt_tuples = sqlAction(sql)
+        in_unitPrice = list(map(int,[pamt for pamt_tuple in pamt_tuples for pamt in pamt_tuple]))[0] ### <요구사항-6> 반영 ###
+        in_disrate = list(map(int,[pamt for pamt_tuple in pamt_tuples for pamt in pamt_tuple]))[1] ### <요구사항-6> 반영 ###
+        yesNo = input('판매가격에 할인율을 적용하시겠습니까? (y/n) : ')
+        if SelOpt(yesNo).startOpt() == "Y": # <1> 할인율이 적용된 가격 계산 
+            dis_price = round((in_unitPrice * (100 - round(in_disrate)))/100)
+            total_price = dis_price * int(qty) 
+            break
+        elif SelOpt(yesNo).startOpt() == "N": # <2> 할인율이 적용되지 않은 가격 계산 <요구사항>                    
+            total_price = in_unitPrice * int(qty) # 할인율이 적용되지 않은 총 가격 
+            break
+        else:
+            print('잘못 입력했습니다. 다시 입력해주세요.')
+            continue
+    return total_price 
+
+
+#-------------------------- 
+def startSale():
+    TableCreate('s')          
+    while True:
+        os.system('cls')
+        print("---판매관리---")
+        print("판매    등록 : 1 ")
+        print("판매목록조회 : 2 ")
+        print("코드별  조회 : 3 ")
+        print("제품명별조회 : 4 ")
+        print("판매    수정 : 5 ")
+        print("판매    삭제 : 6 ")
+        print("판매관리종료 : 9 ")
+        print("시스템  종료 : 0 ")
+        sel = int(input("작업을 선택하세요 : "))
+        c0 = SaleFunc()
+        if sel == 1 :
+            c0.saleCreate()
+            os.system("pause")
+        elif sel == 2 :
+            Read('s').ReadAll()
+            os.system("pause")
+        elif sel == 3 :
+            Read('s').ReadOne('코드')
+            os.system("pause")
+        elif sel == 4 :
+            Read('s').ReadOne('제품명')
+            os.system("pause")
+        elif sel == 5 :
+            c0.saleUpdate()
+            os.system("pause")
+        elif sel == 6 :
+            c0.saleDelete()
+            os.system("pause")
+        elif sel == 9 :
+            print("판매관리를 종료합니다. ") 
+            os.system("pause")
+            os.system('cls')
+            break
+        elif sel == 0:
+            print("시스템을 종료합니다. ") 
+            os.system("pause")
+            os.system('cls')
+            sys.exit(0)
+        else :
+            print("잘못 선택했습니다. ")
+            os.system("pause")
+            
+if __name__ == "__main__" :
+    startSale()
