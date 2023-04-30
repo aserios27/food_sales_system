@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container my-3">
+    <h2 class="border-bottom py-2">{{ product.pname}}</h2>
+    <div class="card my-3">
+        <span class="card-body" style="font-family: monospace; background-color: #FDF5E6;">
+            <div class="card-text" style="white-space: pre-line;">
+        </div>
+            <table class="table">
+                <tr>
+                    <td colspan="2">
+                        {% if product.imgfile %}
+                        <img src="{{ product.imgfile.url }}" style="max-width:400px">
+                        {% else %}
+                        {{ "" }}
+                        {% endif %}
+                    </td>
+                </tr>
+            </table>
+            <table class="table">
+                <thead>
+                <tr class="text-center">
+                    <th scope="col">메인메뉴</th>
+                    <th scope="col">국(음료)</th>
+                    <th scope="col">반찬1</th>
+                    <th scope="col">반찬2</th>
+                    <th scope="col">반찬3</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr class="text-center">
+                    <th>{{ product.pMain }}</th>
+                    <td>{{ product.pSoup }}</td>
+                    <td>{{ product.pSub1 }}</td>
+                    <td>{{ product.pSub2 }}</td>
+                    <td>{{ product.pSub3 }}</td>
+                </tr>
+                </tbody>
+            </table>
+            <span class="d-flex justify-content-end"> <!--<span class="badge badge-primary p-2 text-left mx-3">-->
+                <span class="badge bg-light text-dark">
+                    {% if product.modify_date %}
+                    <div class="text-start">
+                        <span>
+                            <div class="text-left mb-2">modified at</div>
+                            <div>{{ product.modify_date }}</div>
+                        </span>
+                        {% endif %}
+                        <span class="text-start">
+                            <div class="text-left mb-2">{{ product.author.username }}</div>
+                            <div>{{ product.create_date }}</div>
+                        </span>
+                    </div>
+                </span>
+            </span>
+            {% if request.user == product.author %}
+            <div class="my-3">
+                <a href="{% url 'sales:product_modify' product.id  %}"
+                   class="btn btn-sm btn-outline-secondary">수정</a>
+                <a href="#" class="delete btn btn-sm btn-outline-secondary"
+                   data-uri="{% url 'sales:product_delete' product.id  %}">삭제</a>
+            {% endif %}
+            </div>
+        </span>
+    </div>
+</div>
+{% endblock %}
+{% block script %}
+<script type='text/javascript'>
+const delete_elements = document.getElementsByClassName("delete");
+Array.from(delete_elements).forEach(function(element) {
+    element.addEventListener('click', function() {
+        if(confirm("정말로 삭제하시겠습니까?")) {
+            location.href = this.dataset.uri;
+        };
+    });
+});
+</script>
+{% endblock %}

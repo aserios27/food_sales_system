@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h5 class="my-3 border-bottom pb-2">식단 등록</h5>
+    <form method="post" class="post-form my-3" enctype="multipart/form-data">
+        {% csrf_token %}
+<!--        {{ form.as_p }}-->
+        <!-- 오류표시 Start -->
+        {% if form.errors %}
+        <div class="alert alert-danger" role="alert">
+            {% for field in form %}
+            {% if field.errors %}
+            <div>
+                <strong>{{ field.label }}</strong>
+                {{ field.errors }}
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+        {% endif %}
+        <!-- 오류표시 End -->
+        <p class="form-group">
+            <label for="pcode">식단 코드
+            <input type="text" class="form-control" name="pcode" id="pcode" value="{{form.subject.value|default_if_none:'' }}">
+            </label>
+        </p>
+        <p class="form-group">
+            <label for="pname">식 단 명
+            <input type="text" class="form-control" name="pname" id="pname" value="{{form.subject.value|default_if_none:'' }}">
+            </label>
+            <label for="pclass">분 류
+<!--            <input type="text" class="form-control" name="pclass" id="pclass" value="{{form.subject.value|default_if_none:'' }}">-->
+                <select name="pclass" id="pclass">
+                    <option value="">식단 분류</option>
+                    <option value="일반식">일반식</option>
+                    <option value="병원식">병원식</option>
+                    <option value="저염식">저염식</option>
+                    <option value="다이어트식">다이어트식</option>
+                    <option value="고열량식">고열량식</option>
+                    <option value="미분류">미분류</option>
+                </select>
+            </label>
+        </p>
+        <p class="form-group">
+            <label for="pMain">메 인
+            <input type="text" class="form-control" name="pMain" id="pMain" value="{{form.subject.value|default_if_none:'' }}">
+            </label>
+            <label for="pSoup">국(음료)
+            <input type="text" class="form-control" name="pSoup" id="pSoup" value="{{form.subject.value|default_if_none:'' }}">
+            </label>
+        </p>
+        <p class="form-group">
+            <label for="pSub1">반 찬1
+            <input type="text" class="form-control" name="pSub1" id="pSub1" value="{{form.subject.value|default_if_none:'' }}">
+            </label>
+            <label for="pSub2">반 찬2
+            <input type="text" class="form-control" name="pSub2" id="pSub2" value="{{form.subject.value|default_if_none:'' }}">
+            </label>
+            <label for="pSub3">반 찬3
+            <input type="text" class="form-control" name="pSub3" id="pSub3" value="{{form.subject.value|default_if_none:'' }}">
+            </label>
+        </p>
+        <p class="form-group">
+            <label for="unitprice">단 가
+            <input type="text" class="form-control" name="unitprice" id="unitprice" value="{{form.subject.value|default_if_none:'' }}">
+            </label>
+            <label for="discountrate">할 인 율
+            <input type="text" class="form-control" name="discountrate" id="discountrate" value="{{form.subject.value|default_if_none:'' }}">
+            </label>
+        </p>
+        <p class="form-button">
+            <label for="imgfile" class="col-sm-2 col-form-label">제품 사진</label>
+            <input type="file" name="imgfile" id="imgfile">
+        </p>
+        <p>
+            <button type="submit" class="btn btn-primary">등록하기</button>
+        </p>
+    </form>
+</div>
+{% endblock %}
